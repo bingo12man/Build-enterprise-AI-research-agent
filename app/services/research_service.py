@@ -44,6 +44,13 @@ from app.services.evidence_comparison_service import (
 from app.services.contradiction_service import (
     detect_contradictions,
 )
+from app.models.evidence_comparison import (
+    EvidenceComparisonResult,
+)
+
+from app.models.contradiction import (
+    ContradictionResult,
+)
 
 logger = logging.getLogger(
     __name__
@@ -131,12 +138,12 @@ def run_research(
     evidence_assessment = assess_evidence(
         evidence
     )
-    comparison_result = compare_evidence(
-        evidence
+    comparison_result = EvidenceComparisonResult(
+        comparisons=[]
     )
 
-    contradiction_result = detect_contradictions(
-        evidence
+    contradiction_result = ContradictionResult(
+        contradictions=[]
     )
 
     logger.info(
