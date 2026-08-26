@@ -6,6 +6,7 @@ from app.services.vector_store_service import search_chunks
 from app.models.exceptions import RetrievalError
 from app.config.settings import settings
 
+
 def retrieve_evidence(
     query: str,
     top_k: int = settings.RETRIEVAL_TOP_K,
@@ -41,6 +42,8 @@ def retrieve_evidence(
 
     evidence_items = []
 
+    seen_content = set()
+
     for (
         chunk_id,
         content,
@@ -59,6 +62,19 @@ def retrieve_evidence(
         ):
             continue
 
+        normalized_content = (
+            " ".join(
+                content.lower().split()
+            )
+        )
+
+        if normalized_content in seen_content:
+            continue
+
+        seen_content.add(
+            normalized_content
+        )
+
         citation_id = (
             f"S{len(evidence_items) + 1}"
         )
@@ -71,7 +87,9 @@ def retrieve_evidence(
                 source_id=metadata["source_id"],
                 source_name=metadata["source_name"],
                 distance=float(distance),
-                industry=metadata.get("industry"),
+                industry=metadata.get(
+                    "industry"
+                ),
                 document_type=metadata.get(
                     "document_type"
                 ),
