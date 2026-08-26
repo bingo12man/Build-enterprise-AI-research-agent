@@ -1,8 +1,5 @@
 import json
-import os
 from typing import List
-
-from dotenv import load_dotenv
 from groq import Groq
 
 from app.models.evidence import EvidenceItem
@@ -15,7 +12,12 @@ from app.models.exceptions import LLMServiceError
 import time
 import logging
 from app.config.settings import settings
-
+from app.models.evidence_comparison import (
+    EvidenceComparison,
+)
+from app.models.contradiction import (
+    Contradiction,
+)
 
 logger = logging.getLogger(
     __name__
@@ -46,6 +48,8 @@ _client = Groq(
 def generate_research_result(
     query: str,
     evidence_items: List[EvidenceItem],
+    evidence_comparisons: List[EvidenceComparison],
+    contradictions: List[Contradiction],
 ) -> LLMResearchResult:
 
     if not evidence_items:
@@ -55,9 +59,11 @@ def generate_research_result(
         )
 
     user_prompt = build_user_prompt(
-        query=query,
-        evidence_items=evidence_items,
-    )
+    query=query,
+    evidence_items=evidence_items,
+    evidence_comparisons=evidence_comparisons,
+    contradictions=contradictions,
+)
 
     schema = LLMResearchResult.schema()
 

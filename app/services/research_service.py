@@ -22,6 +22,7 @@ from app.services.validation_service import (
 )
 from app.repositories.research_repository import (
     save_research,
+    save_research_sources,
 )
 from app.models.exceptions import ValidationError
 from app.services.evidence_service import (
@@ -29,6 +30,20 @@ from app.services.evidence_service import (
 )
 import logging
 import time
+from app.services.web_research_service import (
+    search_web,
+    convert_web_sources_to_evidence,
+)
+
+from app.services.evidence_merge_service import (
+    merge_evidence,
+)
+from app.services.evidence_comparison_service import (
+    compare_evidence,
+)
+from app.services.contradiction_service import (
+    detect_contradictions,
+)
 
 logger = logging.getLogger(
     __name__
@@ -53,10 +68,26 @@ def run_research(
 
     retrieval_start = time.perf_counter()
 
-    evidence = retrieve_evidence(
+    local_evidence = retrieve_evidence(
         query=request.query,
         top_k=3,
         industry=request.industry,
+    )
+
+    web_sources = search_web(
+        query=request.query,
+        max_results=3,
+    )
+
+    web_evidence = (
+        convert_web_sources_to_evidence(
+            web_sources
+        )
+    )
+
+    evidence = merge_evidence(
+        local_evidence=local_evidence,
+        web_evidence=web_evidence,
     )
 
     retrieval_latency = (
@@ -65,34 +96,68 @@ def run_research(
     )
 
     logger.info(
-        "Retrieval completed | "
-        "research_id=%s | "
-        "chunks=%s | "
-        "latency_ms=%.2f",
-        research_id,
-        len(evidence),
-        retrieval_latency * 1000,
-    )
+    "Research retrieval completed | "
+    "research_id=%s | "
+    "local=%s | "
+    "web=%s | "
+    "total=%s | "
+    "latency_ms=%.2f",
+    research_id,
+    len(local_evidence),
+    len(web_evidence),
+    len(evidence),
+    retrieval_latency * 1000,
+)
 
     for item in evidence:
         logger.info(
-            "Evidence retrieved | "
-            "research_id=%s | "
-            "citation_id=%s | "
-            "chunk_id=%s | "
-            "distance=%.4f",
-            research_id,
-            item.citation_id,
-            item.chunk_id,
-            item.distance,
-        )
+        "Evidence retrieved | "
+        "research_id=%s | "
+        "citation_id=%s | "
+        "source_type=%s | "
+        "source_name=%s | "
+        "distance=%s",
+        research_id,
+        item.citation_id,
+        item.source_type,
+        item.source_name,
+        (
+            f"{item.distance:.4f}"
+            if item.distance is not None
+            else "N/A"
+        ),
+    )
 
-    evidence_assessment = (
-    assess_evidence(
+    evidence_assessment = assess_evidence(
         evidence
     )
+    comparison_result = compare_evidence(
+        evidence
+    )
+
+    contradiction_result = detect_contradictions(
+        evidence
+    )
+
+    logger.info(
+        "Contradiction detection completed | "
+        "research_id=%s | "
+        "contradictions=%s",
+        research_id,
+        len(
+            contradiction_result.contradictions
+        ),
+    )
+
+    logger.info(
+        "Evidence comparison completed | "
+        "research_id=%s | "
+        "comparisons=%s",
+        research_id,
+        len(comparison_result.comparisons),
+    )
+
     
-)
     logger.info(
     "Evidence assessed | "
     "research_id=%s | "
@@ -141,6 +206,10 @@ def run_research(
                 response.confidence.explanation
             ),
         )
+        save_research_sources(
+            research_id=research_id,
+            evidence_items=evidence,
+        )
 
         total_latency = (
             time.perf_counter()
@@ -160,9 +229,15 @@ def run_research(
     llm_start = time.perf_counter()
 
     llm_result = generate_research_result(
-        query=request.query,
-        evidence_items=evidence,
-    )
+    query=request.query,
+    evidence_items=evidence,
+    evidence_comparisons=(
+        comparison_result.comparisons
+    ),
+    contradictions=(
+        contradiction_result.contradictions
+    ),
+)
 
     llm_latency = (
         time.perf_counter()
@@ -202,9 +277,15 @@ def run_research(
         )
 
         llm_result = generate_research_result(
-            query=request.query,
-            evidence_items=evidence,
-        )
+    query=request.query,
+    evidence_items=evidence,
+    evidence_comparisons=(
+        comparison_result.comparisons
+    ),
+    contradictions=(
+        contradiction_result.contradictions
+    ),
+)
 
         validation = validate_citations(
             result=llm_result,
@@ -254,13 +335,13 @@ def run_research(
         ],
         sources=sources,
         confidence=EvidenceConfidence(
-        level=evidence_assessment.level,
-        explanation=(
-            evidence_assessment.explanation
-            + " "
-            + llm_result.confidence.explanation
-        ),
+    level=evidence_assessment.level,
+    explanation=(
+        evidence_assessment.explanation
+        + " "
+        + llm_result.confidence.explanation
     ),
+),
     )
 
 
@@ -270,6 +351,10 @@ def run_research(
         summary=response.summary,
         confidence_level=response.confidence.level,
         confidence_explanation=response.confidence.explanation,
+    )
+    save_research_sources(
+        research_id=research_id,
+        evidence_items=evidence,
     )
 
     total_latency = (
@@ -302,6 +387,8 @@ def build_source_references(
                 source_id=item.citation_id,
                 source_name=item.source_name,
                 evidence_text=item.content,
+                source_type=item.source_type,
+                source_url=item.source_url,
             )
         )
 

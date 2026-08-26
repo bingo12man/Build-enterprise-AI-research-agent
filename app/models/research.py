@@ -33,6 +33,10 @@ class SourceReference(BaseModel):
     source_name: str
     evidence_text: str
 
+    source_type: str
+
+    source_url: Optional[str] = None
+
 
 class Finding(BaseModel):
     title: str

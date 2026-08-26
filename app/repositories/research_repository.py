@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from app.config.database import DATABASE_PATH
-
+from app.models.evidence import EvidenceItem
 
 def get_connection() -> sqlite3.Connection:
     return sqlite3.connect(
@@ -28,6 +28,22 @@ def initialize_database() -> None:
                 summary TEXT NOT NULL,
                 confidence_level TEXT NOT NULL,
                 confidence_explanation TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS research_sources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                research_id TEXT NOT NULL,
+                citation_id TEXT NOT NULL,
+                source_id TEXT,
+                source_name TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                source_url TEXT,
+                evidence_text TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
             """
@@ -77,7 +93,85 @@ def save_research(
     finally:
         connection.close()
 
+def save_research_sources(
+    research_id: str,
+    evidence_items: List[EvidenceItem],
+) -> None:
 
+    if not evidence_items:
+        return
+
+    connection = get_connection()
+
+    try:
+        rows = []
+
+        for item in evidence_items:
+            rows.append(
+                (
+                    research_id,
+                    item.citation_id,
+                    item.source_id,
+                    item.source_name,
+                    item.source_type,
+                    item.source_url,
+                    item.content,
+                    datetime.utcnow().isoformat(),
+                )
+            )
+
+        connection.executemany(
+            """
+            INSERT INTO research_sources (
+                research_id,
+                citation_id,
+                source_id,
+                source_name,
+                source_type,
+                source_url,
+                evidence_text,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+def get_research_sources(
+    research_id: str,
+) -> List[dict]:
+
+    connection = get_connection()
+    connection.row_factory = sqlite3.Row
+
+    try:
+        cursor = connection.execute(
+            """
+            SELECT *
+            FROM research_sources
+            WHERE research_id = ?
+            ORDER BY id ASC
+            """,
+            (
+                research_id,
+            ),
+        )
+
+        rows = cursor.fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    finally:
+        connection.close()
+        
 def get_research_by_id(
     research_id: str,
 ) -> Optional[dict]:

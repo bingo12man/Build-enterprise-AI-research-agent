@@ -27,6 +27,10 @@ class Settings:
         "GROQ_API_KEY",
     )
 
+    TAVILY_API_KEY = os.getenv(
+    "TAVILY_API_KEY",
+)
+
     GROQ_MODEL = os.getenv(
         "GROQ_MODEL",
         "openai/gpt-oss-20b",

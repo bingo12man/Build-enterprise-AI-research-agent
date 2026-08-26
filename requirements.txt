@@ -8,3 +8,5 @@ groq
 chromadb
 sentence-transformers
 torch
+ddgs
+tavily-python

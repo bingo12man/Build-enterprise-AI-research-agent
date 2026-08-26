@@ -1,57 +1,308 @@
 # Enterprise AI Research Agent
 
-An enterprise-style Retrieval-Augmented Generation (RAG) research application that answers business questions using approved internal evidence, generates structured findings and recommendations, validates citations, scores evidence confidence, and stores research history.
+A structured enterprise research application built for the **MODUS Enterprise AI Build Challenge – Assignment 9: Enterprise AI Research Agent**.
+
+The application accepts a business research question, retrieves relevant internal knowledge, searches external web sources, stores supporting evidence, compares sources, detects contradictions, generates grounded conclusions, validates citations, and maintains traceable research history.
+
+This is designed as an **enterprise research pipeline**, not a generic chatbot with web search.
 
 ---
 
-## Features
+## Live Demo
 
-- FastAPI backend
-- Streamlit frontend
-- Retrieval-Augmented Generation (RAG)
+**Streamlit Cloud**
+
+https://build-enterprise-ai-research-agent-chhcsgdgvwgtytvhckfnxs.streamlit.app/
+
+---
+
+## Key Capabilities
+
+- Streamlit research interface
+- FastAPI backend/API layer
+- Internal Retrieval-Augmented Generation (RAG)
+- Dynamic external web research using Tavily
 - SentenceTransformer embeddings
 - Chroma vector database
-- Groq LLM integration
-- Structured Pydantic responses
-- Citation validation
-- Evidence confidence scoring
-- Weak-evidence fallback
-- SQLite research history
-- Logging and latency tracking
-- Automated evaluation suite
+- Internal + external evidence merging
+- Evidence-confidence assessment
+- Explicit multi-source evidence comparison
+- Contradiction detection
+- Groq LLM structured synthesis
+- Pydantic structured outputs
+- Deterministic citation-ID validation
+- Weak-evidence safe fallback
+- Persistent SQLite research history
+- Persistent source metadata and evidence
+- Source URL and source-type traceability
+- Research IDs for request-level traceability
+- Logging and latency measurement
+- Automated RAG evaluation suite
 - Pytest unit tests
+- Streamlit Cloud deployment
 
 ---
 
-## Architecture
+## Challenge Pipeline
 
 ```text
-User Question
-      ↓
-Streamlit UI
-      ↓
-FastAPI API
-      ↓
-Research Orchestrator
-      ↓
-Retrieval Service
-      ↓
-Embedding Model
-      ↓
-Chroma Vector Store
-      ↓
-Evidence Assessment
-      ↓
-Groq LLM
-      ↓
-Citation Validation
-      ↓
-SQLite History
-      ↓
-Structured Response
-      ↓
-Streamlit UI
+Define Research Question
+        ↓
+Search Sources
+        ↓
+Collect Information
+        ↓
+Store Sources
+        ↓
+Extract Evidence
+        ↓
+Compare Evidence
+        ↓
+Assess / Classify Findings
+        ↓
+Detect Contradictions
+        ↓
+Generate Conclusions
+        ↓
+Validate Citations
+        ↓
+Maintain Traceability
 ```
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart TD
+
+    A[User] --> B[Streamlit UI]
+    B --> C[Research Service / Orchestrator]
+    O[FastAPI REST API] --> C
+
+    C --> D1[Internal Knowledge Retrieval]
+    C --> D2[External Web Research]
+
+    D1 --> E1[Sentence Transformers]
+    E1 --> E2[ChromaDB Vector Store]
+
+    D2 --> E3[Tavily Search API]
+
+    E2 --> F[Evidence Merge]
+    E3 --> F
+
+    F --> G[Evidence Assessment]
+    G --> H[Evidence Comparison]
+    H --> I[Contradiction Detection]
+    I --> J[Groq LLM Synthesis]
+    J --> K[Citation Validation]
+    K --> L[Structured Research Response]
+
+    L --> B
+    F --> M[SQLite Source Persistence]
+    L --> N[SQLite Research History]
+```
+
+### Architecture explanation
+
+The user submits a research question through Streamlit. The research orchestrator retrieves relevant internal knowledge from ChromaDB using SentenceTransformer embeddings while also searching external sources through Tavily.
+
+The internal and external evidence are merged into a unified evidence package with citation IDs. The backend evaluates evidence quality, explicitly compares sources, detects contradictions, and passes the grounded evidence package to Groq for structured synthesis.
+
+The generated response is validated to ensure that every citation ID actually exists in the supplied evidence. Research history and supporting source metadata are stored in SQLite for persistence and traceability.
+
+The Streamlit deployment currently calls the shared research service directly. FastAPI exposes the same service layer as a REST API, allowing another frontend or enterprise system to integrate without rewriting the research pipeline.
+
+---
+
+## Architecture Layers
+
+| Layer | Implementation |
+|---|---|
+| User Interface | Streamlit |
+| API Layer | FastAPI |
+| Research Orchestration | `research_service.py` |
+| Internal Retrieval | ChromaDB |
+| Embeddings | SentenceTransformers |
+| External Research | Tavily |
+| Evidence Merge | `evidence_merge_service.py` |
+| Evidence Assessment | `evidence_service.py` |
+| Evidence Comparison | `evidence_comparison_service.py` |
+| Contradiction Detection | `contradiction_service.py` |
+| LLM Generation | Groq |
+| Structured Validation | Pydantic |
+| Citation Validation | `validation_service.py` |
+| Research History | SQLite |
+| Source Persistence | SQLite |
+| Configuration | `.env` / Streamlit Secrets |
+| Observability | Python logging + latency tracking |
+
+---
+
+## End-to-End Research Flow
+
+### 1. User enters a research question
+
+Example:
+
+```text
+How is AI predictive maintenance changing manufacturing?
+```
+
+### 2. Internal semantic retrieval
+
+```text
+Query
+  ↓
+Embedding
+  ↓
+Chroma similarity search
+  ↓
+Relevant internal chunks
+```
+
+Internal evidence can include:
+
+```text
+citation_id
+source_id
+source_name
+source_type
+chunk_id
+semantic distance
+industry
+document_type
+```
+
+### 3. External web research
+
+```text
+Research Question
+      ↓
+Tavily Search
+      ↓
+Relevant public sources
+      ↓
+Title + URL + evidence text
+```
+
+External sources are converted into the same evidence structure used by internal retrieval.
+
+### 4. Evidence merge
+
+Internal and web evidence are combined and assigned unified citation IDs such as:
+
+```text
+S1
+S2
+S3
+S4
+S5
+S6
+```
+
+### 5. Evidence assessment
+
+The system evaluates evidence strength before generation.
+
+Internal semantic distance is used only for internal vector-store evidence. Web evidence is not assigned a fabricated Chroma distance.
+
+Possible levels:
+
+```text
+High
+Medium
+Low
+```
+
+If evidence is too weak, the system returns a safe limitation instead of generating unsupported conclusions.
+
+### 6. Evidence comparison
+
+The application performs a separate comparison stage before final synthesis.
+
+Example:
+
+```text
+Topic:
+Use of sensor data in predictive maintenance
+
+Supporting sources:
+S1, S4
+
+Comparison:
+Both sources describe the use of sensor data and analytics
+to detect anomalies and support proactive maintenance.
+```
+
+Comparison citation IDs are validated against the actual evidence set.
+
+### 7. Contradiction detection
+
+A separate service checks whether sources make genuinely incompatible claims.
+
+If no genuine contradiction exists:
+
+```json
+{
+  "contradictions": []
+}
+```
+
+### 8. Structured LLM synthesis
+
+Groq receives:
+
+```text
+Research Question
++
+Raw Evidence
++
+Evidence Comparisons
++
+Contradiction Analysis
+```
+
+The LLM is instructed to use only supplied evidence, never invent citation IDs, communicate uncertainty when sources conflict, and return structured JSON.
+
+### 9. Citation validation
+
+If the available evidence is `S1` through `S6` and the model invents `S99`, the response fails deterministic citation validation and is regenerated.
+
+### 10. Persistence and traceability
+
+Each research run receives a UUID `research_id`.
+
+The main result is stored in `research_history`, while supporting evidence is stored in `research_sources`.
+
+---
+
+## Persistent Data Model
+
+### `research_history`
+
+| Field | Purpose |
+|---|---|
+| `research_id` | Unique research-run identifier |
+| `query` | Original research question |
+| `summary` | Generated research summary |
+| `confidence_level` | High / Medium / Low |
+| `confidence_explanation` | Evidence-confidence explanation |
+| `created_at` | Creation timestamp |
+
+### `research_sources`
+
+| Field | Purpose |
+|---|---|
+| `id` | SQLite row ID |
+| `research_id` | Links evidence to a research run |
+| `citation_id` | Citation such as `S4` |
+| `source_id` | Internal ID or web URL |
+| `source_name` | Human-readable source title |
+| `source_type` | `internal` or `web` |
+| `source_url` | Public URL for web evidence |
+| `evidence_text` | Exact evidence used by the pipeline |
+| `created_at` | Persistence timestamp |
 
 ---
 
@@ -60,44 +311,51 @@ Streamlit UI
 ```text
 enterprise-ai-research-agent/
 │
+├── .streamlit/
+│   └── config.toml
+│
 ├── app/
+│   ├── __init__.py
+│   ├── main.py
 │   ├── api/
 │   │   ├── health.py
 │   │   ├── history.py
 │   │   └── research.py
-│   │
 │   ├── config/
 │   │   ├── database.py
 │   │   ├── logging_config.py
 │   │   └── settings.py
-│   │
 │   ├── models/
+│   │   ├── contradiction.py
 │   │   ├── document.py
 │   │   ├── evidence.py
+│   │   ├── evidence_comparison.py
 │   │   ├── exceptions.py
 │   │   ├── history.py
 │   │   ├── llm.py
 │   │   ├── research.py
-│   │   └── validation.py
-│   │
+│   │   ├── validation.py
+│   │   └── web_source.py
 │   ├── prompts/
+│   │   ├── contradiction_prompt.py
+│   │   ├── evidence_comparison_prompt.py
 │   │   └── research_prompt.py
-│   │
 │   ├── repositories/
 │   │   └── research_repository.py
-│   │
-│   ├── services/
-│   │   ├── chunking_service.py
-│   │   ├── document_service.py
-│   │   ├── embedding_service.py
-│   │   ├── evidence_service.py
-│   │   ├── llm_service.py
-│   │   ├── research_service.py
-│   │   ├── retrieval_service.py
-│   │   ├── validation_service.py
-│   │   └── vector_store_service.py
-│   │
-│   └── main.py
+│   └── services/
+│       ├── chunking_service.py
+│       ├── contradiction_service.py
+│       ├── document_service.py
+│       ├── embedding_service.py
+│       ├── evidence_comparison_service.py
+│       ├── evidence_merge_service.py
+│       ├── evidence_service.py
+│       ├── llm_service.py
+│       ├── research_service.py
+│       ├── retrieval_service.py
+│       ├── validation_service.py
+│       ├── vector_store_service.py
+│       └── web_research_service.py
 │
 ├── data/
 │   ├── manufacturing_ai.txt
@@ -115,8 +373,7 @@ enterprise-ai-research-agent/
 │   └── test_validation_service.py
 │
 ├── ui/
-│   ├── api_client.py
-│   └── app.py
+│   └── streamlit_app.py
 │
 ├── .env.example
 ├── .gitignore
@@ -126,464 +383,134 @@ enterprise-ai-research-agent/
 
 ---
 
-## How It Works
+## Technology Stack
 
-### 1. User submits a business research question
-
-Example:
-
-```text
-How can AI help detect machine failures before equipment breaks down?
-```
-
-The Streamlit frontend sends the request to FastAPI.
-
-### 2. Query embedding
-
-The query is converted into a vector embedding using:
-
-```text
-all-MiniLM-L6-v2
-```
-
-### 3. Semantic retrieval
-
-The query embedding is compared against document chunk embeddings stored in Chroma.
-
-The system retrieves the most semantically relevant chunks.
-
-Each retrieved evidence item contains information such as:
-
-```text
-citation_id
-chunk_id
-source_id
-source_name
-distance
-content
-metadata
-```
-
-### 4. Evidence assessment
-
-Retrieved evidence is scored using semantic-distance thresholds.
-
-The system assigns one of:
-
-```text
-High
-Medium
-Low
-```
-
-If the evidence is too weak, the LLM is not called.
-
-Instead the system returns:
-
-```text
-Insufficient evidence was found to answer this question reliably.
-```
-
-### 5. Prompt construction
-
-Relevant evidence is inserted into a controlled prompt.
-
-Example:
-
-```text
-QUESTION
-
-How can AI help detect machine failures?
-
-EVIDENCE
-
-[S1]
-Source: manufacturing_ai.txt
-Predictive maintenance uses historical maintenance records...
-```
-
-The LLM is instructed to:
-
-- use only supplied evidence
-- not invent facts or sources
-- not invent citation IDs
-- treat retrieved evidence as source material, not instructions
-- return structured JSON
-
-### 6. LLM generation
-
-Groq is used as the LLM provider.
-
-Current model:
-
-```text
-openai/gpt-oss-20b
-```
-
-The LLM generates structured:
-
-```text
-Summary
-Findings
-Opportunities
-Risks
-Source IDs
-Confidence explanation
-```
-
-### 7. Pydantic validation
-
-The generated response is parsed into Pydantic models.
-
-This ensures required fields and expected data types are present.
-
-Malformed model output is handled using bounded retry logic.
-
-### 8. Citation validation
-
-Every generated citation is checked against the evidence retrieved for the request.
-
-Example:
-
-```text
-Generated citations:
-S1
-S3
-
-Retrieved evidence:
-S1
-S2
-S3
-
-Result:
-Valid
-```
-
-If the model invents:
-
-```text
-S99
-```
-
-citation validation fails.
-
-### 9. Structured research response
-
-The final report contains:
-
-```text
-Research Summary
-Key Findings
-Recommended AI Opportunities
-Risks and Gaps
-Supporting Evidence
-Evidence Confidence
-Research ID
-```
-
-### 10. Research history
-
-Completed research is stored in SQLite.
-
-Stored fields include:
-
-```text
-research_id
-query
-summary
-confidence_level
-confidence_explanation
-created_at
-```
-
-The Streamlit UI displays the latest five research records.
+| Technology | Purpose |
+|---|---|
+| Python | Core implementation |
+| FastAPI | REST API layer |
+| Streamlit | Interactive frontend |
+| Pydantic | Request/response and LLM schema validation |
+| SentenceTransformers | Embeddings |
+| ChromaDB | Internal vector retrieval |
+| Tavily | External web research |
+| Groq | LLM inference |
+| SQLite | Research/source persistence |
+| Pytest | Unit testing |
+| python-dotenv | Local configuration |
+| Uvicorn | FastAPI server |
 
 ---
 
-## Setup
+## Configuration
 
-### 1. Clone the project
+Create a `.env` file:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-20b
+TAVILY_API_KEY=your_tavily_api_key
+```
+
+Do **not** commit `.env`.
+
+For Streamlit Cloud, use Streamlit Secrets:
+
+```toml
+GROQ_API_KEY = "your-key"
+GROQ_MODEL = "openai/gpt-oss-20b"
+TAVILY_API_KEY = "your-key"
+```
+
+---
+
+## Installation
 
 ```bash
 git clone <repository-url>
 cd enterprise-ai-research-agent
-```
 
-### 2. Create a virtual environment
-
-```bash
-python3 -m venv venv
-```
-
-Activate it:
-
-```bash
+python -m venv venv
 source venv/bin/activate
-```
 
-### 3. Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+On Windows:
 
-Create a local `.env` file using `.env.example` as the template.
-
-Example:
-
-```env
-APP_NAME=Enterprise AI Research Agent
-APP_ENV=development
-DEBUG=false
-
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=openai/gpt-oss-20b
-
-CHROMA_PATH=data/chroma_db
-DATABASE_PATH=data/research_history.db
-
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-
-RETRIEVAL_TOP_K=3
-
-HIGH_DISTANCE_THRESHOLD=1.20
-MEDIUM_DISTANCE_THRESHOLD=1.60
+```bash
+venv\\Scripts\\activate
 ```
-
-Never commit the real `.env` file.
 
 ---
 
-## Run the Backend
+## Running Locally
 
-From the project root:
+### Streamlit
+
+```bash
+streamlit run ui/streamlit_app.py
+```
+
+### FastAPI
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-FastAPI:
-
-```text
-http://127.0.0.1:8000
-```
-
-Swagger documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
 ---
 
-## Run the Streamlit UI
-
-Open another terminal and activate the virtual environment:
-
-```bash
-source venv/bin/activate
-```
-
-Run:
-
-```bash
-streamlit run ui/app.py
-```
-
-Streamlit normally runs at:
+## Example Research Query
 
 ```text
-http://localhost:8501
+How is AI predictive maintenance changing manufacturing?
 ```
 
-If a different port is already in use, Streamlit may automatically use another local port.
-
----
-
-## API Endpoints
-
-### Health
+Typical flow:
 
 ```text
-GET /health
+Question
+↓
+Internal Chroma Retrieval
+↓
+Tavily Web Research
+↓
+Evidence Merge
+↓
+Evidence Assessment
+↓
+Evidence Comparison
+↓
+Contradiction Detection
+↓
+Groq Structured Synthesis
+↓
+Citation Validation
+↓
+SQLite Persistence
+↓
+Structured Research Report
 ```
-
-Checks whether the backend is running.
-
-### Research
-
-```text
-POST /research
-```
-
-Example request:
-
-```json
-{
-  "query": "How can AI help detect machine failures before equipment breaks down?",
-  "industry": "manufacturing"
-}
-```
-
-### Research History
-
-```text
-GET /history
-```
-
-Example:
-
-```text
-GET /history?limit=5
-```
-
-### Research History by ID
-
-```text
-GET /history/{research_id}
-```
-
----
-
-## Evaluation
-
-The project includes a small regression evaluation set.
-
-Run:
-
-```bash
-python -m evals.run_evaluation
-```
-
-Current evaluation dataset:
-
-```text
-8 total questions
-6 supported manufacturing questions
-2 unsupported questions
-```
-
-Current MVP regression result:
-
-```text
-Overall pass rate: 100.00%
-Behavior accuracy: 100.00%
-Topic coverage rate: 100.00%
-Retrieval relevance rate: 100.00%
-Unsupported query rejection rate: 100.00%
-Citation validity rate: 100.00%
-
-Overall passed: 8/8
-Relevant queries accepted: 6/6
-Unsupported queries rejected: 2/2
-Citation-valid cases: 6/6
-Execution failures: 0/8
-```
-
-These results represent a small MVP regression benchmark and should not be interpreted as production accuracy.
-
----
-
-## Evaluation Metrics
-
-### Behavior Accuracy
-
-Checks whether the system behaved correctly.
-
-For supported questions:
-
-```text
-Medium/High evidence
-+
-generated answer
-```
-
-For unsupported questions:
-
-```text
-Low evidence
-+
-safe insufficient-evidence response
-```
-
-### Topic Coverage Rate
-
-Checks whether expected business concepts appear in the generated answer.
-
-### Retrieval Relevance Rate
-
-Checks whether supported queries retrieve evidence classified as Medium or High.
-
-This is currently a proxy based on the configured semantic-distance thresholds.
-
-### Unsupported Query Rejection Rate
-
-Measures whether questions outside the knowledge base are correctly rejected.
-
-Examples include:
-
-```text
-Heart disease treatments
-Cryptocurrency investment strategy
-```
-
-### Citation Validity Rate
-
-Checks whether generated citation IDs exist in the retrieved evidence package.
-
-Citation validity checks reference correctness. It does not by itself prove full semantic entailment or groundedness.
-
----
-
-## Unit Tests
-
-Run:
-
-```bash
-pytest -v
-```
-
-The automated tests cover:
-
-```text
-Chunking
-Evidence confidence
-Citation validation
-SQLite behavior
-```
-
-The unit tests are designed not to call the live LLM so they remain:
-
-```text
-Fast
-Deterministic
-Low cost
-Reliable
-```
-
-The full RAG evaluation suite is run separately.
-
-> Note: before final submission, ensure the local Pytest suite is fully passing and update this README with the final exact test count if you want to display it.
 
 ---
 
 ## Reliability Features
 
-The application includes:
-
 - Retrieval-Augmented Generation
-- weak-evidence rejection
-- structured Pydantic output
-- bounded LLM retries
+- structured Pydantic validation
+- bounded retry logic
+- retry handling for malformed evidence-comparison JSON
 - deterministic citation validation
-- safe API error handling
-- research IDs for request traceability
-- latency logging
-- evidence-confidence scoring
+- weak-evidence rejection
+- safe fallback behavior
+- evidence comparison
+- contradiction detection
 - persistent research history
-- regression evaluation
+- persistent research sources
+- source URLs for web evidence
+- evidence-confidence scoring
+- request-level research IDs
+- logging and latency measurement
 
 ---
 
@@ -594,88 +521,122 @@ The backend logs information such as:
 ```text
 research_id
 query
+industry
 retrieval latency
-retrieved chunk IDs
+internal evidence count
+web evidence count
+citation IDs
+source type
+source name
 semantic distance
 evidence confidence
+comparison count
+contradiction count
 LLM latency
-citation validation result
+citation-validation result
 total latency
 ```
 
-Typical request flow:
+---
+
+## Evaluation
+
+The current RAG evaluation suite contains **8 cases** and produced **8/8 successful evaluation results** in the current project configuration.
+
+Evaluation focuses on:
+
+- relevant evidence retrieval
+- supported-query response generation
+- weak-evidence fallback
+- citation validity
+- confidence behavior
+
+---
+
+## Unit Testing
+
+Pytest tests cover:
 
 ```text
-Research started
-→ Retrieval completed
-→ Evidence assessed
-→ LLM generation completed
-→ Citation validation completed
-→ Research completed
+chunking
+evidence assessment
+repository behavior
+citation validation
+```
+
+The latest local run was **not fully green**; chunking-test cleanup remains. Run:
+
+```bash
+pytest
+```
+
+---
+
+## Persistence Verification
+
+Persistence was verified by:
+
+```text
+Run research
+↓
+Save supporting sources
+↓
+Exit Python
+↓
+Restart Python
+↓
+Load same research ID
+↓
+Recover internal + web sources
 ```
 
 ---
 
 ## Security
 
-The current project is a local MVP using approved documents.
+Current MVP protections include:
 
-Existing protections include:
+- Pydantic input validation
+- environment-based secrets
+- Streamlit Secrets
+- retrieved evidence treated as untrusted source data
+- structured LLM output validation
+- deterministic citation validation
+- no committed API keys
+
+Production improvements should include authentication, RBAC, tenant isolation, document-level authorization, rate limiting, HTTPS, audit logging, managed secrets, and centralized monitoring.
+
+---
+
+## Deployment
+
+### Hosted Streamlit demo
+
+https://build-enterprise-ai-research-agent-chhcsgdgvwgtytvhckfnxs.streamlit.app/
+
+Streamlit entry point:
 
 ```text
-Pydantic input validation
-Environment-based secret handling
-Controlled system prompt
-Retrieved evidence treated as untrusted source data
-Structured LLM output validation
-Citation validation
+ui/streamlit_app.py
 ```
 
-A production implementation should additionally include:
+The hosted deployment uses Python 3.11 and Streamlit Secrets.
+
+### API architecture
+
+FastAPI remains available for REST-based integrations:
 
 ```text
-Authentication
-Role-Based Access Control
-Tenant isolation
-Document-level authorization
-Rate limiting
-HTTPS
-Audit logging
-Managed secrets
+FastAPI
+   ↓
+Research Service
 ```
 
-These production security features are architectural recommendations and are not fully implemented in the MVP.
+Both Streamlit and FastAPI reuse the same core research logic.
 
 ---
 
 ## Production Architecture
-
-The MVP currently uses:
-
-```text
-FastAPI
-Streamlit
-SQLite
-Local Chroma
-Local document files
-Groq API
-```
-
-A production version could evolve toward:
-
-```text
-Load Balancer
-      ↓
-Multiple FastAPI Instances
-      ↓
-Research Services
-   ↙          ↘
-PostgreSQL   Shared Vector Database
-      ↓
-Object Storage
-      ↓
-Groq / Other LLM Provider
-```
 
 Potential production replacements:
 
@@ -683,193 +644,165 @@ Potential production replacements:
 |---|---|
 | SQLite | PostgreSQL |
 | Local Chroma | Managed vector DB / pgvector |
-| Local text files | S3 / object storage |
-| Single FastAPI instance | Multiple replicas |
-| `.env` | Secrets manager |
-| Console logs | Centralized monitoring |
-| No authentication | Authentication + RBAC |
+| Local files | Object storage |
+| Streamlit demo | Enterprise web frontend |
+| `.env` / Streamlit Secrets | Cloud secrets manager |
+| Console logs | Centralized observability |
+| No authentication | SSO + RBAC |
+| Single instance | Horizontally scaled services |
 
 ---
 
 ## Scalability
 
-FastAPI should remain mostly stateless.
+The architecture separates UI, API, orchestration, retrieval, external research, comparison, contradiction analysis, generation, validation, and persistence.
 
-Persistent state should live in shared services such as:
-
-```text
-PostgreSQL
-Vector database
-Object storage
-```
-
-Large document ingestion can be moved to asynchronous workers:
+For larger ingestion:
 
 ```text
-Document Upload
-      ↓
+Document
+   ↓
 Object Storage
-      ↓
+   ↓
 Queue
-      ↓
+   ↓
 Background Worker
-      ↓
+   ↓
 Chunk
-      ↓
+   ↓
 Embed
-      ↓
-Vector Database
+   ↓
+Shared Vector Database
 ```
-
-Possible production technologies could include queues or worker systems such as Redis, Celery, SQS, or Kafka depending on scale and infrastructure.
 
 ---
 
-## Multi-Tenancy
+## Explainability and Traceability
 
-For an enterprise SaaS deployment, document metadata can include a tenant identifier.
-
-Example:
+For each research run the application can retain:
 
 ```text
-tenant_id
+Research ID
+Question
+Evidence
+Citation IDs
+Source names
+Source types
+Source URLs
+Confidence
+Generated findings
 ```
 
-Retrieval should enforce:
-
-```text
-authenticated tenant
-→ only that tenant's authorized documents
-```
-
-Authorization should be enforced before evidence is sent to the LLM.
+This allows an evaluator to inspect why the system reached its conclusions.
 
 ---
 
 ## Current Limitations
 
-- Small curated manufacturing knowledge base
-- Small eight-question evaluation dataset
-- Evidence thresholds are calibrated for the current dataset and embedding model
-- Citation validation checks citation existence but not complete semantic entailment
-- Local Chroma is intended for MVP use rather than distributed production
-- SQLite is intended for local history storage
-- Authentication and RBAC are not implemented
-- Full multi-tenancy is not implemented
-- Source IDs should be made stable across document re-indexing for production
-- Full document versioning is not currently implemented
+- Internal knowledge base is currently small and manufacturing-focused.
+- Repeated indexing can produce duplicate internal chunks; retrieval deduplication can be improved.
+- Tavily currently provides search-result evidence rather than a full web-crawling pipeline.
+- Full source-authority scoring is not implemented.
+- Citation validation checks citation existence but not complete semantic entailment.
+- Evidence thresholds are calibrated for the current dataset and embedding model.
+- Local Chroma is intended for MVP use.
+- SQLite is appropriate for challenge/local persistence but not high-scale multi-user production.
+- Authentication and RBAC are not implemented.
+- Full multi-tenancy is not implemented.
+- Full document versioning is not implemented.
+- Chunking unit-test cleanup remains.
 
 ---
 
 ## Future Improvements
 
-Possible improvements include:
-
-- larger enterprise document datasets
-- stable source IDs
-- document versioning
+- duplicate-evidence removal
+- source-quality scoring
+- domain trust ranking
+- full-page web extraction
+- freshness scoring
 - hybrid semantic + keyword retrieval
 - reranking
-- Recall@K evaluation
-- Precision@K evaluation
+- richer contradiction evaluation
+- persisted web knowledge re-indexing
+- stable source IDs
+- document versioning
+- Recall@K / Precision@K
 - groundedness scoring
-- human-reviewed evaluation datasets
+- human-reviewed evals
 - LLM-as-a-judge evaluation
-- authentication
-- RBAC
-- multi-tenant retrieval
+- authentication and RBAC
 - PostgreSQL
 - managed vector database
 - object storage
-- asynchronous document ingestion
-- LLM provider fallback
+- asynchronous ingestion
+- LLM-provider fallback
 - rate limiting
 - centralized monitoring
-- cloud deployment
 
 ---
 
-## Example Demo Query
+## Model and Service Inventory
 
-```text
-How can AI help detect machine failures before equipment breaks down?
-```
+| Component | Current Choice | Purpose |
+|---|---|---|
+| Embedding Model | `all-MiniLM-L6-v2` | Semantic retrieval |
+| LLM | `openai/gpt-oss-20b` through Groq | Structured synthesis and evidence analysis |
+| Search | Tavily | Dynamic external research |
+| Vector Store | ChromaDB | Internal evidence retrieval |
+| Relational Store | SQLite | Research/source persistence |
+| UI | Streamlit | Interactive demo |
+| API | FastAPI | REST integration |
+| Validation | Pydantic | Structured schemas |
+| Testing | Pytest | Unit testing |
 
-Expected flow:
-
-```text
-Query
-↓
-Semantic retrieval
-↓
-Predictive-maintenance evidence
-↓
-High evidence confidence
-↓
-LLM generation
-↓
-Citation validation
-↓
-Structured report
-↓
-Supporting evidence
-↓
-Saved research history
-```
+A separate submission document should provide exact package/library licence details.
 
 ---
 
-## Technology Stack
+## AI-Assisted Development Disclosure
 
-```text
-Python
-FastAPI
-Streamlit
-Pydantic
-SentenceTransformers
-Chroma
-Groq
-SQLite
-Pytest
-```
+AI coding assistance was used for architecture planning, code drafting/refactoring, debugging, test planning, documentation, and demo preparation.
+
+All design choices, code paths, validation logic, deployment steps, limitations, and trade-offs should remain personally explainable during technical validation.
 
 ---
 
-## MVP Deployment
+## Suggested Live Demo
 
-The current application is intended to run locally.
-
-Backend:
-
-```bash
-uvicorn app.main:app --reload
-```
-
-Frontend:
-
-```bash
-streamlit run ui/app.py
-```
-
-For a production deployment, the same architecture can be migrated to managed database, vector search, storage, authentication, monitoring, and horizontally scaled API infrastructure.
+1. Open the Streamlit application.
+2. Enter a new enterprise research question.
+3. Show internal and web evidence being collected dynamically.
+4. Show source names and citation IDs.
+5. Explain evidence comparison.
+6. Explain contradiction detection.
+7. Show structured findings/opportunities/risks.
+8. Show confidence and source traceability.
+9. Show persisted research history.
+10. Explain the FastAPI integration path.
+11. Explain MVP limitations and the production scaling path.
 
 ---
 
 ## Summary
 
-The Enterprise AI Research Agent demonstrates an end-to-end enterprise RAG architecture with:
+The Enterprise AI Research Agent demonstrates:
 
 ```text
-Retrieval
-Grounded generation
-Structured output
-Citation validation
-Evidence confidence
-Safe fallback
-Research history
+Dynamic Research
+Internal RAG
+External Search
+Evidence Storage
+Evidence Comparison
+Contradiction Detection
+Grounded Generation
+Structured Output
+Citation Validation
+Confidence Assessment
+Persistent Traceability
 Observability
 Evaluation
-Unit testing
+Cloud Deployment
 ```
 
-The current version is designed as a local MVP while keeping the architecture extensible toward a larger enterprise deployment.
+The focus is not simply on generating an answer. The application demonstrates the full path from **question → evidence → comparison → validation → persistent, traceable conclusion**.
