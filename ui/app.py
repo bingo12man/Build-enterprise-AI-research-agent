@@ -1,10 +1,9 @@
 import requests
 import streamlit as st
 
-from api_client import (
-    get_history,
-    run_research,
-)
+from app.models.research import ResearchRequest
+from app.services.research_service import run_research
+from app.repositories.research_repository import get_recent_research
 
 
 st.set_page_config(
@@ -59,14 +58,20 @@ if run_button:
                 "Running research..."
             ):
 
-                result = run_research(
-                    query=query.strip(),
-                    industry=(
-                        industry.strip()
-                        if industry.strip()
-                        else None
-                    ),
-                )
+                request = ResearchRequest(
+                query=query.strip(),
+                industry=(
+                    industry.strip()
+                    if industry.strip()
+                    else None
+                ),
+            )
+
+            result = run_research(
+                request
+            )
+
+            result = result.model_dump()
 
             st.success(
                 "Research completed."
@@ -283,9 +288,9 @@ st.subheader(
 
 try:
 
-    history = get_history(
-        limit=5
-    )
+    history = get_recent_research(
+    limit=5
+)
 
 
     if not history:
