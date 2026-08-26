@@ -1,7 +1,6 @@
 import json
 from typing import List
-from groq import Groq
-
+from groq import Groq, RateLimitError
 from app.models.evidence import EvidenceItem
 from app.models.llm import LLMResearchResult
 from app.prompts.research_prompt import (
@@ -154,6 +153,46 @@ def generate_research_result(
                 raise LLMServiceError(
                     "LLM returned invalid JSON."
                 ) from error
+        except RateLimitError as error:
+
+            logger.warning(
+                "Groq rate limit reached | "
+                "model=%s | "
+                "attempt=%s",
+                GROQ_MODEL,
+                attempt,
+            )
+
+            if attempt == max_attempts:
+                raise LLMServiceError(
+                    "LLM rate limit exceeded."
+                ) from error
+
+            time.sleep(8)
+
+        except LLMServiceError:
+
+            if attempt == max_attempts:
+                raise
+
+            time.sleep(2)
+
+        except json.JSONDecodeError as error:
+
+            logger.warning(
+                "LLM returned invalid JSON | "
+                "model=%s | "
+                "attempt=%s",
+                GROQ_MODEL,
+                attempt,
+            )
+
+            if attempt == max_attempts:
+                raise LLMServiceError(
+                    "LLM returned invalid JSON."
+                ) from error
+
+            time.sleep(2)
 
         except Exception as error:
 
@@ -170,4 +209,4 @@ def generate_research_result(
                     "LLM service request failed."
                 ) from error
 
-        time.sleep(1)
+            time.sleep(2)
