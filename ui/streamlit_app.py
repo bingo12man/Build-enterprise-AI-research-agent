@@ -67,19 +67,19 @@ if run_button:
             ):
 
                 request = ResearchRequest(
-                query=query.strip(),
-                industry=(
-                    industry.strip()
-                    if industry.strip()
-                    else None
-                ),
-            )
+                    query=query.strip(),
+                    industry=(
+                        industry.strip()
+                        if industry.strip()
+                        else None
+                    ),
+                )
 
-            result = run_research(
-                request
-            )
+                result = run_research(
+                    request
+                )
 
-            result = result.model_dump()
+                result = result.model_dump()
 
             st.success(
                 "Research completed."
@@ -212,31 +212,59 @@ if run_button:
                 "Supporting Evidence"
             )
 
-            for source in result.sources:
+            if result["sources"]:
 
-                st.markdown(
-                    f"### {source.source_id} — "
-                    f"{source.source_name}"
-                )
+                for source in result["sources"]:
 
-                st.write(
-                    f"Source Type: "
-                    f"{source.source_type}"
-                )
+                    source_id = source[
+                        "source_id"
+                    ]
 
-                if source.source_url:
+                    source_name = source[
+                        "source_name"
+                    ]
+
+                    source_type = source.get(
+                        "source_type",
+                        "internal",
+                    )
+
+                    source_url = source.get(
+                        "source_url"
+                    )
+
+                    evidence_text = source[
+                        "evidence_text"
+                    ]
+
                     st.markdown(
-                        f"[Open Source]("
-                        f"{source.source_url}"
-                        f")"
+                        f"### {source_id} — "
+                        f"{source_name}"
                     )
 
-                with st.expander(
-                    "View Evidence"
-                ):
                     st.write(
-                        source.evidence_text
+                        f"Source Type: "
+                        f"{source_type}"
                     )
+
+                    if (
+                        source_type == "web"
+                        and source_url
+                    ):
+
+                        st.markdown(
+                            f"[Open Source]("
+                            f"{source_url}"
+                            f")"
+                        )
+
+                    with st.expander(
+                        "View Evidence"
+                    ):
+
+                        st.write(
+                            evidence_text
+                        )
 
             else:
 
@@ -294,6 +322,17 @@ if run_button:
                 "the backend API."
             )
 
+        except Exception as error:
+
+            st.error(
+                "Research failed. "
+                "Please try again."
+            )
+
+            st.exception(
+                error
+            )
+
 
 st.divider()
 
@@ -306,8 +345,8 @@ st.subheader(
 try:
 
     history = get_recent_research(
-    limit=5
-)
+        limit=5
+    )
 
 
     if not history:
@@ -352,7 +391,7 @@ try:
                 )
 
 
-except requests.RequestException:
+except Exception:
 
     st.warning(
         "Research history is "
