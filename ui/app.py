@@ -1,0 +1,338 @@
+import requests
+import streamlit as st
+
+from api_client import (
+    get_history,
+    run_research,
+)
+
+
+st.set_page_config(
+    page_title="Enterprise AI Research Agent",
+    layout="wide",
+)
+
+
+st.title(
+    "Enterprise AI Research Agent"
+)
+
+st.write(
+    "Ask a business research question and "
+    "receive a grounded AI-generated report."
+)
+
+
+query = st.text_area(
+    "Research Question",
+    placeholder=(
+        "Example: What AI opportunities can "
+        "help a manufacturing company?"
+    ),
+)
+
+
+industry = st.text_input(
+    "Industry",
+    value="manufacturing",
+)
+
+
+run_button = st.button(
+    "Run Research"
+)
+
+
+if run_button:
+
+    if not query.strip():
+
+        st.warning(
+            "Please enter a research question."
+        )
+
+    else:
+
+        try:
+
+            with st.spinner(
+                "Running research..."
+            ):
+
+                result = run_research(
+                    query=query.strip(),
+                    industry=(
+                        industry.strip()
+                        if industry.strip()
+                        else None
+                    ),
+                )
+
+            st.success(
+                "Research completed."
+            )
+
+            st.subheader(
+                "Research Summary"
+            )
+
+            st.write(
+                result["summary"]
+            )
+
+
+            st.subheader(
+                "Key Findings"
+            )
+
+            if result["findings"]:
+
+                for finding in result["findings"]:
+
+                    st.markdown(
+                        f"### {finding['title']}"
+                    )
+
+                    st.write(
+                        finding["description"]
+                    )
+
+                    st.caption(
+                        "Sources: "
+                        + ", ".join(
+                            finding[
+                                "source_ids"
+                            ]
+                        )
+                    )
+
+            else:
+
+                st.info(
+                    "No findings available."
+                )
+
+
+            st.subheader(
+                "Recommended AI Opportunities"
+            )
+
+            if result["opportunities"]:
+
+                for opportunity in (
+                    result["opportunities"]
+                ):
+
+                    st.markdown(
+                        f"### {opportunity['title']}"
+                    )
+
+                    st.write(
+                        opportunity[
+                            "description"
+                        ]
+                    )
+
+                    st.write(
+                        "Expected Value:",
+                        opportunity[
+                            "expected_value"
+                        ],
+                    )
+
+                    st.write(
+                        "Difficulty:",
+                        opportunity[
+                            "difficulty"
+                        ],
+                    )
+
+                    st.caption(
+                        "Sources: "
+                        + ", ".join(
+                            opportunity[
+                                "source_ids"
+                            ]
+                        )
+                    )
+
+            else:
+
+                st.info(
+                    "No opportunities available."
+                )
+
+
+            st.subheader(
+                "Risks and Gaps"
+            )
+
+            if result["risks"]:
+
+                for risk in result["risks"]:
+
+                    st.markdown(
+                        f"### {risk['title']}"
+                    )
+
+                    st.write(
+                        risk["description"]
+                    )
+
+                    st.caption(
+                        "Sources: "
+                        + ", ".join(
+                            risk[
+                                "source_ids"
+                            ]
+                        )
+                    )
+
+            else:
+
+                st.info(
+                    "No risks available."
+                )
+
+
+            st.subheader(
+                "Supporting Evidence"
+            )
+
+            if result["sources"]:
+
+                for source in result["sources"]:
+
+                    label = (
+                        f"{source['source_id']} — "
+                        f"{source['source_name']}"
+                    )
+
+                    with st.expander(
+                        label
+                    ):
+
+                        st.write(
+                            source["evidence_text"]
+                        )
+
+            else:
+
+                st.info(
+                    "No supporting evidence available."
+                )
+
+
+            st.subheader(
+                "Evidence Confidence"
+            )
+
+            st.write(
+                result["confidence"]["level"]
+            )
+
+            st.write(
+                result["confidence"][
+                    "explanation"
+                ]
+            )
+
+            st.caption(
+                "Research ID: "
+                + result["research_id"]
+            )
+
+
+        except requests.HTTPError as error:
+
+            try:
+
+                detail = (
+                    error.response.json().get(
+                        "detail",
+                        "Research failed.",
+                    )
+                )
+
+            except ValueError:
+
+                detail = (
+                    "Research failed."
+                )
+
+            st.error(
+                detail
+            )
+
+
+        except requests.RequestException:
+
+            st.error(
+                "Could not connect to "
+                "the backend API."
+            )
+
+
+st.divider()
+
+
+st.subheader(
+    "Recent Research History"
+)
+
+
+try:
+
+    history = get_history(
+        limit=5
+    )
+
+
+    if not history:
+
+        st.info(
+            "No research history available."
+        )
+
+    else:
+
+        for item in history:
+
+            with st.expander(
+                item["query"]
+            ):
+
+                st.write(
+                    item["summary"]
+                )
+
+                st.write(
+                    "Confidence:",
+                    item[
+                        "confidence_level"
+                    ],
+                )
+
+                st.write(
+                    item[
+                        "confidence_explanation"
+                    ]
+                )
+
+                st.caption(
+                    "Research ID: "
+                    + item["research_id"]
+                )
+
+                st.caption(
+                    "Created at: "
+                    + item["created_at"]
+                )
+
+
+except requests.RequestException:
+
+    st.warning(
+        "Research history is "
+        "temporarily unavailable."
+    )

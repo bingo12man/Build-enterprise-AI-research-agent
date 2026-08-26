@@ -1,0 +1,83 @@
+[
+  {
+    "id": "eval_01",
+    "query": "How can AI help detect machine failures before equipment breaks down?",
+    "industry": "manufacturing",
+    "expected_behavior": "answer",
+    "expected_topics": [
+      "predictive maintenance",
+      "sensor data",
+      "machine failure"
+    ]
+  },
+  {
+    "id": "eval_02",
+    "query": "How can computer vision improve manufacturing quality inspection?",
+    "industry": "manufacturing",
+    "expected_behavior": "answer",
+    "expected_topics": [
+      "computer vision",
+      "visual defects",
+      "inspection"
+    ]
+  },
+  {
+    "id": "eval_03",
+    "query": "How can AI improve demand forecasting in manufacturing?",
+    "industry": "manufacturing",
+    "expected_behavior": "answer",
+    "expected_topics": [
+      "demand forecasting",
+      "inventory planning",
+      "historical data"
+    ]
+  },
+  {
+    "id": "eval_04",
+    "query": "What AI opportunities can help a manufacturing company?",
+    "industry": "manufacturing",
+    "expected_behavior": "answer",
+    "expected_topics": [
+      "predictive maintenance",
+      "demand forecasting",
+      "computer vision"
+    ]
+  },
+  {
+    "id": "eval_05",
+    "query": "What treatments are available for heart disease?",
+    "industry": "manufacturing",
+    "expected_behavior": "insufficient_evidence",
+    "expected_topics": []
+  },
+  {
+    "id": "eval_06",
+    "query": "What is the best cryptocurrency investment strategy?",
+    "industry": "manufacturing",
+    "expected_behavior": "insufficient_evidence",
+    "expected_topics": []
+  },
+  {
+    "id": "eval_07",
+    "query": "What risks should a company consider when adopting AI in manufacturing?",
+    "industry": "manufacturing",
+    "expected_behavior": "answer",
+    "expected_topics": [
+      "data quality",
+      "integration",
+      "monitoring",
+      "human oversight"
+    ]
+  },
+  {
+    "id": "eval_08",
+    "query": "What data is needed for successful AI adoption in manufacturing?",
+    "industry": "manufacturing",
+    "expected_behavior": "answer",
+    "expected_topics": [
+      "reliable data",
+      "data collection",
+      "integration"
+    ]
+  }
+]
