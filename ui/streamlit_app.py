@@ -212,22 +212,31 @@ if run_button:
                 "Supporting Evidence"
             )
 
-            if result["sources"]:
+            for source in result.sources:
 
-                for source in result["sources"]:
+                st.markdown(
+                    f"### {source.source_id} — "
+                    f"{source.source_name}"
+                )
 
-                    label = (
-                        f"{source['source_id']} — "
-                        f"{source['source_name']}"
+                st.write(
+                    f"Source Type: "
+                    f"{source.source_type}"
+                )
+
+                if source.source_url:
+                    st.markdown(
+                        f"[Open Source]("
+                        f"{source.source_url}"
+                        f")"
                     )
 
-                    with st.expander(
-                        label
-                    ):
-
-                        st.write(
-                            source["evidence_text"]
-                        )
+                with st.expander(
+                    "View Evidence"
+                ):
+                    st.write(
+                        source.evidence_text
+                    )
 
             else:
 
