@@ -64,7 +64,7 @@ def generate_research_result(
     contradictions=contradictions,
 )
 
-    schema = LLMResearchResult.schema()
+    schema = LLMResearchResult.model_json_schema()
 
     structured_prompt = (
         user_prompt
